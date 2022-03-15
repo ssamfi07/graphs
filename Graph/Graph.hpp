@@ -7,33 +7,44 @@
 #include <list>
 #include <map>
 #include <vector>
+#include <iomanip>
+#include <limits> 
+#include<algorithm>
 
 #define MAX_NODES 100
 #define MAX_EDGES 1000
 
 class Graph 
 {
-    int nodes_;
-    int edges_;
-    bool matrix[MAX_NODES][MAX_NODES] = {0};
-    std::map<int, std::list<int> > adjacencyList_;
+    unsigned nodes_;
+    unsigned edges_;
+    uint16_t matrix[MAX_NODES][MAX_NODES] = {0};
+    std::map<unsigned, std::list<unsigned> > adjacencyList_;
     std::vector<bool> visited_;
-    std::map<int, std::list<int> > connectedElements_;
+    std::map<unsigned, std::list<unsigned> > connectedElements_;
+
+    std::vector<uint32_t> minDist_;
 
     void vectorInit();
 
-    void addEdgeToList(int, int);
-    void addSingularNodes(std::map<int, std::list<int>>&);
+    void readLoop(std::ifstream&, uint16_t(*)[MAX_NODES][MAX_NODES], const std::string&);
 
-    void displayMatrix(int, bool[][MAX_NODES]);
-    void displayAdjacencyList(std::map<int, std::list<int> >);
-    void displayConnectedElements(std::map<int, std::list<int>>&);
+    void addEdgeToList(unsigned, unsigned);
+    void addSingularNodes(std::map<unsigned, std::list<unsigned>>&);
 
-    void dfsElement(int, int);
+    void displayMatrix(unsigned, uint16_t[][MAX_NODES]);
+    void displayAdjacencyList(std::map<unsigned, std::list<unsigned> >);
+    void displayConnectedElements(std::map<unsigned, std::list<unsigned>>&);
 
+    void dfsElement(unsigned, unsigned);
+
+    unsigned short minNodeDist();
+    void dijkInit(unsigned short srcNode);
+    void dijkDisplay(unsigned short srcNode);
 public:
     void dfs();
-    void readFromFile();
+    void dijkstra(unsigned short srcNode);
+    void readFromFile(const std::string&);
 };
 
 #endif  // _GRAPH_HPP
