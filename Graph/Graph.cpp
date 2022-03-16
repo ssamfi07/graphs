@@ -1,9 +1,16 @@
 #include "Graph.hpp"
 
-// set visited vector sizes and initial values
-void Graph::vectorInit()
+#define INF std::numeric_limits<uint32_t>::max()
+
+// initialize all 
+void Graph::init()
 {
+    std::cout << "======== initialization =========" << std::endl;
     visited_.resize(nodes_ + 1, false);
+    std::memset(matrix, 0, sizeof(matrix));
+    adjacencyList_.clear();
+    std::fill(visited_.begin(), visited_.end(), false);
+    minDist_.resize(nodes_ + 1, INF);
 }
 
 void Graph::displayMatrix(unsigned nodes, uint16_t matrix[][MAX_NODES])
@@ -34,7 +41,6 @@ void Graph::readFromFile(const std::string& fileName)
     readLoop(fin, &matrix, "non-oriented");
     displayMatrix(nodes_, matrix);
     displayAdjacencyList(adjacencyList_);
-    vectorInit();
 }
 
 void Graph::readLoop(std::ifstream& fin, uint16_t (*matrix)[MAX_NODES][MAX_NODES], const std::string& graphType)
@@ -160,13 +166,12 @@ void Graph::displayConnectedElements(std::map<unsigned, std::list<unsigned>>& co
     std::cout << "========= Connected elements ends =========" << std::endl;
 }
 
-
 // return the index of the vertex not visited
 unsigned short Graph::minNodeDist()
 {
     // initialization
     unsigned short index;
-    uint32_t minimum = std::numeric_limits<uint32_t>::max();
+    uint32_t minimum = INF;
 
     for (auto i = 0; i < nodes_; ++i)
     {
@@ -179,16 +184,6 @@ unsigned short Graph::minNodeDist()
         }
     }
     return index;
-}
-
-// initialize visited array and minDist array
-void Graph::dijkInit(unsigned short srcNode)
-{
-    std::cout << "======== dijkstra initialization =========" << std::endl;
-    matrix[MAX_NODES][MAX_NODES] = {0};
-    std::fill(visited_.begin(), visited_.end(), false);
-    minDist_.resize(nodes_ + 1, std::numeric_limits<uint32_t>::max());
-    minDist_[srcNode] = uint32_t(0);
 }
 
 // display minDist from source to all nodes
@@ -206,23 +201,89 @@ void Graph::dijkDisplay(unsigned short srcNode)
 
 void Graph::dijkstra(unsigned short srcNode)
 {
-    dijkInit(srcNode);
-    for (auto i = 0; i < nodes_ - 1; ++i)
+    minDist_[srcNode] = uint32_t(0);
+
+    // start timer
+    boost::posix_time::ptime start = boost::posix_time::microsec_clock::local_time();
+    for (auto i = 1; i <= nodes_; ++i)
     {
         unsigned short minIndex = minNodeDist();
         visited_[minIndex] = true;
-        for (auto j = 0; j < nodes_ + 1; ++j)
+        for (auto j = 1; j <= nodes_; ++j)
         {
             // performing minimum distance update, if possible
             if (!visited_[j]
                 && matrix[minIndex][j]
-                && minDist_[minIndex] != std::numeric_limits<uint32_t>::max()
+                && minDist_[minIndex] != INF
                 && minDist_[minIndex] + matrix[minIndex][j] < minDist_[j])
             {
                 minDist_[j] = minDist_[minIndex] + matrix[minIndex][j];
             }
         }
     }
-    std::cout << "======== dijkstra executed =========" << std::endl;
+    // stop timer
+    boost::posix_time::ptime stop = boost::posix_time::microsec_clock::local_time();
+    // calculate difference
+    boost::posix_time::time_duration diff = stop - start;
+    std::cout << "======== dijkstra executed in " << diff.total_nanoseconds() <<" ns=========" << std::endl;
     dijkDisplay(srcNode);
 }
+
+void Graph::prepFWMatrix()
+{
+    for (auto i = 1; i <= nodes_; ++i)
+    {
+        for (auto j = 1; j <= nodes_; ++j)
+        {
+            if (i != j && !matrix[i][j])
+            {
+                matrix[i][j] = std::numeric_limits<uint16_t>::max();
+            }
+        }
+    }
+}
+
+// Implementing floyd warshall algorithm
+void Graph::floydWarshall()
+{
+    prepFWMatrix();
+    // start timer
+    boost::posix_time::ptime start = boost::posix_time::microsec_clock::local_time();
+    for (auto i = 1; i <= nodes_; i++)
+        for (auto j = 1; j <= nodes_; j++)
+            solutionMatrix[i][j] = matrix[i][j];
+    // Adding vertices individually
+    for (auto k = 1; k <= nodes_; k++) 
+    {
+        for (auto i = 1; i <= nodes_; i++) 
+        {
+            for (auto j = 1; j <= nodes_; j++) 
+            {
+                if (solutionMatrix[i][k] + solutionMatrix[k][j] < solutionMatrix[i][j])
+                    solutionMatrix[i][j] = solutionMatrix[i][k] + solutionMatrix[k][j];
+            }
+        }
+    }
+    // stop timer
+    boost::posix_time::ptime stop = boost::posix_time::microsec_clock::local_time();
+    // calculate difference
+    boost::posix_time::time_duration diff = stop - start;
+    std::cout << "======== floyd warshall executed in " << diff.total_nanoseconds() <<" ns=========" << std::endl;
+    printFWMatrix();
+}
+
+void Graph::printFWMatrix()
+{
+    for (auto i = 1; i <= nodes_; ++i) 
+    {
+        for (auto j = 1; j <= nodes_; ++j) 
+        {
+            if (solutionMatrix[i][j] == std::numeric_limits<uint16_t>::max())
+                std::cout << std::setw(3) << "INF";
+            else
+                std::cout << std::setw(3) << solutionMatrix[i][j];
+            }
+        std::cout << std::endl;
+    }
+}
+
