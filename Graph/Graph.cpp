@@ -9,8 +9,10 @@ void Graph::init()
     visited_.resize(nodes_ + 1, false);
     std::memset(matrix, 0, sizeof(matrix));
     adjacencyList_.clear();
+    adjacencyListWeighted_.clear();
     std::fill(visited_.begin(), visited_.end(), false);
     minDist_.resize(nodes_ + 1, INF);
+    activeNodes_.clear();
 }
 
 void Graph::displayMatrix(unsigned nodes, uint16_t matrix[][MAX_NODES])
@@ -41,6 +43,7 @@ void Graph::readFromFile(const std::string& fileName)
     readLoop(fin, &matrix, "non-oriented");
     displayMatrix(nodes_, matrix);
     displayAdjacencyList(adjacencyList_);
+    displayWeightedAdjacencyList(adjacencyListWeighted_);
 }
 
 void Graph::readLoop(std::ifstream& fin, uint16_t (*matrix)[MAX_NODES][MAX_NODES], const std::string& graphType)
@@ -69,6 +72,8 @@ void Graph::readLoop(std::ifstream& fin, uint16_t (*matrix)[MAX_NODES][MAX_NODES
                     // set node in adjacencyList_(undirected graph)
                     addEdgeToList(source, destination);
                     addEdgeToList(destination, source);
+                    addWeightedEdgeToList(source, destination, weight);
+                    addWeightedEdgeToList(destination, source, weight);
                 }
                 
             }
@@ -81,6 +86,11 @@ void Graph::readLoop(std::ifstream& fin, uint16_t (*matrix)[MAX_NODES][MAX_NODES
 void Graph::addEdgeToList(unsigned source, unsigned destination)
 {
     adjacencyList_[source].push_back(destination);
+}
+
+void Graph::addWeightedEdgeToList(unsigned source, unsigned destination, uint32_t weight)
+{
+    adjacencyListWeighted_[source].push_back(std::make_pair(destination, weight));
 }
 
 void Graph::displayAdjacencyList(std::map<unsigned, std::list<unsigned> > adjacencyList)
@@ -97,7 +107,24 @@ void Graph::displayAdjacencyList(std::map<unsigned, std::list<unsigned> > adjace
         }
         std::cout << std::endl;
     }
-    std::cout << "========= Display adjacency list ends =========" << std::endl;
+    std::cout << adjacencyList.size() << "========= Display adjacency list ends =========" << std::endl;
+}
+
+void Graph::displayWeightedAdjacencyList(std::map<unsigned, std::list< std::pair<unsigned, uint32_t > > > adjacencyList)
+{
+    std::cout << "========= Display adjacency list begins =========" << std::endl;
+    for (auto const& mapElem : adjacencyList)
+    {
+        // display node
+        std::cout << mapElem.first << ": " << std::endl;
+        // display node adjacency list
+        for (auto const& listElem : mapElem.second)
+        {
+            std::cout << listElem.first << " " << listElem.second << std::endl;
+        }
+        std::cout << std::endl;
+    }
+    std::cout << adjacencyList.size() << "========= Display adjacency list ends =========" << std::endl;
 }
 
 // triggers depth-first traversal for the graph from a starting node
@@ -287,3 +314,26 @@ void Graph::printFWMatrix()
     }
 }
 
+uint32_t Graph::fastDisjkstra(unsigned short srcNode, unsigned short targetNode)
+{
+    minDist_[srcNode] = uint32_t(0);
+    activeNodes_.insert(std::make_pair( srcNode, 0));
+    while (!activeNodes_.empty()) 
+    {
+        // first node
+        unsigned where = activeNodes_.begin()->first;
+        if (where == targetNode) return minDist_[where];
+        activeNodes_.erase(activeNodes_.begin()); // delete the entry node
+        // go through the element's adjacency list
+        for (auto adjNodes : adjacencyListWeighted_[where])
+        {
+            if (minDist_[adjNodes.first] >= minDist_[where] + adjNodes.second)
+            {
+                activeNodes_.erase({ adjNodes.first, minDist_[adjNodes.first] });
+                minDist_[adjNodes.first] = minDist_[where] + adjNodes.second;
+                activeNodes_.insert({ adjNodes.first, minDist_[adjNodes.first] });
+            }
+        }
+    }
+    return INF;
+}
